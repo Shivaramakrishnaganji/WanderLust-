@@ -1,46 +1,44 @@
 const User = require("../models/user.js");
+const ExpressError = require("../utils/ExpressError.js");
+const { sendSuccess } = require("../utils/apiResponse.js");
 
-
-module.exports.renderSignupForm=(req,res)=>{
-    res.render('users/signup.ejs');
+const userPayload = (user) => ({
+    id: user._id,
+    username: user.username,
+    email: user.email,
+});
+module.exports.apiCurrentUser = (req, res) => {
+    return sendSuccess(res, {
+        user: req.user ? userPayload(req.user) : null,
+    });
 };
 
-module.exports.renderLoginForm = (req,res)=>{
-     res.render("users/login.ejs");
-};
-
-module.exports.signup = async(req,res,next)=>{
-    // error handing along with the signup functionality 
+module.exports.apiSignup = async(req,res,next)=>{
     try{
         let {username , email, password} = req.body;
         const newUser = new User({email , username});
         const registerUser = await User.register(newUser, password);
-        console.log(registerUser);
+
         req.login(registerUser, (err) => {
             if(err){
                  return next(err);
             }
-            req.flash('success',"Welcome to Wanderlust");
-            res.redirect("/listings");
+            return sendSuccess(res, { user: userPayload(registerUser) }, 201);
         });
     }catch(e){
-        req.flash("error",e.message);
-        res.redirect('/signup');
+        throw new ExpressError(400, e.message);
     }
 };
 
-module.exports.login=async(req,res)=>{
-       req.flash("success","Welcome back to Wanderlust !");
-       let redirectUrl=res.locals.redirectUrl || "/listings";
-       res.redirect(redirectUrl);
+module.exports.apiLogin = async(req,res)=>{
+       return sendSuccess(res, { user: userPayload(req.user) });
 };
 
-module.exports.logout= (req,res,next)=>{
+module.exports.apiLogout= (req,res,next)=>{
     req.logout((err)=>{
         if(err){
-          return  next(err)
+          return next(err)
         }
-        req.flash("success","you are logged out!");
-        res.redirect("/listings");
+        return sendSuccess(res, { loggedOut: true });
     })
 };

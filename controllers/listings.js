@@ -1,113 +1,103 @@
 const Listing = require("../models/listing.js");
 const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+const ExpressError = require("../utils/ExpressError.js");
+const { sendSuccess } = require("../utils/apiResponse.js");
 
 const mapToken = process.env.MAP_TOKEN;
 const geocodingClient = mbxGeocoding({accessToken : mapToken});
 
-
-
-module.exports.index = async (req, res)=>{
-  const allListings = await  Listing.find({});
-    res.render("listings/index.ejs",{allListings});
-}
-
-
-module.exports.renderNewForm =  (req,res)=>{
-    res.render("listings/new.ejs")
-}
-
-module.exports.showListing= async (req,res)=>{
-    let {id}=req.params;
-   const listing = await Listing.findById(id)
-   .populate({
-    path:"reviews",
-    populate : {
-        path: "author",
-        model:"User",
+const listingPopulateOptions = [
+  { path: "owner", select: "username email" },
+  {
+    path: "reviews",
+    populate: {
+      path: "author",
+      select: "username email",
     },
-   })
-   .populate("owner");
-   if(!listing){
-    req.flash("error","Listing you requested for does not exists");
-    res.redirect('/listings');
-   }
-   console.log(listing)
-   res.render("listings/show.ejs",{listing});
-};
+  },
+];
 
+const getListingPayload = async (req) => {
+  const response = await geocodingClient.forwardGeocode({
+    query: req.body.listing.location,
+    limit: 1,
+  }).send();
 
-module.exports.createListing = async (req,res,next)=>{
-//    try{
-//      //  method-1 let {title,description , image , price , country m }
-let response = await geocodingClient.forwardGeocode({
-  query: req.body.listing.location,
-  limit: 1,
- })
- .send();
+  const geometry = response.body.features[0] && response.body.features[0].geometry;
+  if (!geometry) {
+    throw new ExpressError(400, "Could not find coordinates for this location");
+  }
 
+  const listingPayload = { ...req.body.listing, geometry };
 
-console.log("Headers:", req.headers['content-type']);
-console.log("Body:", req.body);
-  let url = req.file.path;
-  let filename = req.file.filename;
-
-   const newListing= new Listing(req.body.listing);
-   if (req.file) {
-    newListing.image = {
+  if (req.file) {
+    listingPayload.image = {
       url: req.file.path,
       filename: req.file.filename,
     };
-   }
-   newListing.owner= req.user._id;
-   newListing.geometry =  response.body.features[0].geometry;
+  }
 
-  let savedListing = await newListing.save();
-  console.log(savedListing);
-  req.flash("success","New Listing is Created!");
-   res.redirect("/listings");    // console.log(listing);
-//    }catch(err){
-//     next(err);
-//    }
+  return listingPayload;
 };
 
-module.exports.renderEditForm = async (req,res)=>{
-     let {id}=req.params;
-     const listing = await Listing.findById(id);
-       if(!listing){
-    req.flash("error","Listing you requested for does not exists");
-     return  res.redirect('/listings');
-   }
-   let originalImageUrl = listing.image.url;
-   originalImageUrl=originalImageUrl.replace('/upload','/upload/w_250');
-      // originalImageUrl=originalImageUrl.replace('/upload','/upload/h_300,w_250');
-
-     res.render("listings/edit.ejs",{listing , originalImageUrl});
-
+const findListingForApi = async (id) => {
+  const listing = await Listing.findById(id).populate(listingPopulateOptions);
+  if (!listing) {
+    throw new ExpressError(404, "Listing not found");
+  }
+  return listing;
 };
 
-module.exports.updateListing = async (req,res)=>{
-    let {id}=req.params;
+module.exports.apiIndex = async (req, res) => {
+  const allListings = await Listing.find({}).populate("owner", "username email");
+  return sendSuccess(res, allListings);
+};
 
-    let listing = await Listing.findByIdAndUpdate(id,{ ...req.body.listing});
+module.exports.apiShowListing = async (req, res) => {
+  const listing = await findListingForApi(req.params.id);
+  return sendSuccess(res, listing);
+};
 
-    if(typeof req.file !== "undefined"){
-    let url = req.file.path;
-    let filename = req.file.filename;
-    listing.image={url,filename};
+module.exports.apiCreateListing = async (req, res) => {
+  const listingPayload = await getListingPayload(req);
+  const newListing = new Listing(listingPayload);
+  newListing.owner = req.user._id;
+
+  const savedListing = await newListing.save();
+  const listing = await findListingForApi(savedListing._id);
+  return sendSuccess(res, listing, 201);
+};
+
+module.exports.apiUpdateListing = async (req, res) => {
+  const { id } = req.params;
+  const listing = await Listing.findByIdAndUpdate(
+    id,
+    { ...req.body.listing },
+    { new: true, runValidators: true }
+  );
+
+  if (!listing) {
+    throw new ExpressError(404, "Listing not found");
+  }
+
+  if (req.file) {
+    listing.image = {
+      url: req.file.path,
+      filename: req.file.filename,
+    };
     await listing.save();
-    }
-   
+  }
 
-    req.flash("success","Listing is Updated!");
-
-    res.redirect(`/listings/${id}`);
+  const updatedListing = await findListingForApi(id);
+  return sendSuccess(res, updatedListing);
 };
 
-module.exports.destroyListing = async(req,res)=>{
-    let {id}=req.params;
-         const deletedlisting = await Listing.findByIdAndDelete(id);
-        console.log(deletedlisting);
-          req.flash("success"," Listing is Deleted!");
+module.exports.apiDestroyListing = async (req, res) => {
+  const { id } = req.params;
+  const deletedListing = await Listing.findByIdAndDelete(id);
+  if (!deletedListing) {
+    throw new ExpressError(404, "Listing not found");
+  }
 
-         res.redirect("/listings")
+  return sendSuccess(res, { id });
 };
