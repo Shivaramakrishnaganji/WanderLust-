@@ -109,7 +109,7 @@ export default function ListingsIndex({ setFlash }) {
           <p>Rooms</p>
         </div>
 
-        <div className="filter">
+        {/* <div className="filter">
           <div>
             <i className="fa-solid fa-bed"></i>
           </div>
@@ -121,7 +121,7 @@ export default function ListingsIndex({ setFlash }) {
             <i className="fa-solid fa-bed"></i>
           </div>
           <p>Rooms</p>
-        </div>
+        </div> */}
 
         <div className="tax-toggle">
           <div className="form-check-reverse form-switch">
