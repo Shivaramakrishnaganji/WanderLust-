@@ -25,10 +25,24 @@ const MongoStore = require('connect-mongo').default;
 const flash=require('connect-flash');
 
 
-//Routes Paths
-const listingRouter = require("./routes/listing.js");
-const reviewRouter= require("./routes/reviews.js");
-const userRouter=require("./routes/user.js");
+const legacyListingRoutePath = path.join(__dirname, "routes", "listing.js");
+const legacyReviewRoutePath = path.join(__dirname, "routes", "reviews.js");
+const legacyUserRoutePath = path.join(__dirname, "routes", "user.js");
+const legacyWebRoutesAvailable =
+  fs.existsSync(legacyListingRoutePath) &&
+  fs.existsSync(legacyReviewRoutePath) &&
+  fs.existsSync(legacyUserRoutePath);
+
+let listingRouter = null;
+let reviewRouter = null;
+let userRouter = null;
+
+if (legacyWebRoutesAvailable) {
+  listingRouter = require("./routes/listing.js");
+  reviewRouter = require("./routes/reviews.js");
+  userRouter = require("./routes/user.js");
+}
+
 const apiAuthRouter = require("./routes/apiAuth.js");
 const apiListingsRouter = require("./routes/apiListings.js");
 const apiReviewsRouter = require("./routes/apiReviews.js");
@@ -42,7 +56,8 @@ const User = require("./models/user.js");
 const dbUrl= process.env.ATLAS_DB_URL;
 const isProduction = process.env.NODE_ENV === "production";
 const forceLegacyRollback = process.env.FORCE_EJS_ROLLBACK === "true";
-const serveReactFrontend = isProduction && !forceLegacyRollback;
+const serveLegacyRollback = forceLegacyRollback && legacyWebRoutesAvailable;
+const serveReactFrontend = isProduction && !serveLegacyRollback;
 const reactDistPath = path.join(__dirname, "frontend", "dist");
 const reactIndexPath = path.join(reactDistPath, "index.html");
 
@@ -86,12 +101,14 @@ async function main() {
 
 
  //middleware's
-app.set("view engine","ejs");
-app.set("views",path.join(__dirname,"views"));
+if (legacyWebRoutesAvailable) {
+    app.set("view engine","ejs");
+    app.set("views",path.join(__dirname,"views"));
+    app.engine('ejs', ejsMate);
+}
 app.use(express.urlencoded({extended : true}));
 app.use(express.json());
 app.use(methodOverride("_method"));
-app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname,"public")));
 
 
@@ -147,10 +164,12 @@ if (serveReactFrontend) {
     }
 
     app.use(express.static(reactDistPath));
-} else {
+} else if (serveLegacyRollback) {
     app.use("/listings",listingRouter);
     app.use("/listings/:id/reviews", reviewRouter);
     app.use("/",userRouter);
+} else if (forceLegacyRollback && !legacyWebRoutesAvailable) {
+    console.warn("FORCE_EJS_ROLLBACK=true but legacy EJS web routes are not available. Continuing without legacy rollback routes.");
 }
 
 
@@ -195,7 +214,13 @@ app.use((err,req,res,next)=>{
         message,
     });
  }
- res.status(statusCode).render("error.ejs",{err});
+ if (legacyWebRoutesAvailable) {
+    return res.status(statusCode).render("error.ejs",{err});
+ }
+ res.status(statusCode).json({
+    ok: false,
+    message,
+ });
 //  res.status(statusCode).send(message);
 })
 
@@ -204,6 +229,7 @@ let port=8000;
 main()
   .then(() => {
     console.log("Connected to db");
+    console.log(`Runtime mode: ${serveReactFrontend ? "react-production" : serveLegacyRollback ? "legacy-ejs-rollback" : "api-only"}`);
     app.listen(port,()=>{
         console.log("server is listing to port 8000")
     })
