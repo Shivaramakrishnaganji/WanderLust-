@@ -14,8 +14,8 @@ require('dotenv').config();
 const mongoose= require("mongoose");
 const path =  require("path");
 const methodOverride= require("method-override");
+const ejsMate = require('ejs-mate');
 const ExpressError = require("./utils/ExpressError.js");
-const { isApiRequest, sendError } = require("./utils/apiResponse.js");
 //Cookies Package 
 const cookieParser = require('cookie-parser');
 //sessions in the APP.JS
@@ -26,18 +26,12 @@ const flash=require('connect-flash');
 
 
 //Routes Paths
-<<<<<<< HEAD
-const apiListingRouter = require("./routes/apiListings.js");
-const apiReviewRouter = require("./routes/apiReviews.js");
-const apiUserRouter = require("./routes/apiUsers.js");
-=======
 const listingRouter = require("./routes/listing.js");
 const reviewRouter= require("./routes/reviews.js");
 const userRouter=require("./routes/user.js");
 const apiAuthRouter = require("./routes/apiAuth.js");
 const apiListingsRouter = require("./routes/apiListings.js");
 const apiReviewsRouter = require("./routes/apiReviews.js");
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 //Implemetation of the passport's
 const passport = require("passport");
@@ -92,34 +86,15 @@ async function main() {
 
 
  //middleware's
+app.set("view engine","ejs");
+app.set("views",path.join(__dirname,"views"));
 app.use(express.urlencoded({extended : true}));
 app.use(express.json());
 app.use(methodOverride("_method"));
-app.use(express.static(path.join(__dirname,"/public")));
+app.engine('ejs', ejsMate);
+app.use(express.static(path.join(__dirname,"public")));
 
-const allowedClientOrigins = (process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "http://localhost:5173")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
 
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-
-    if (origin && allowedClientOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin);
-        res.header("Access-Control-Allow-Credentials", "true");
-        res.header("Vary", "Origin");
-    }
-
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(204);
-    }
-
-    next();
-});
 
 //cookies middleware
 
@@ -162,11 +137,6 @@ app.use((req,res,next)=>{
 
 
 //Routes
-<<<<<<< HEAD
-app.use("/api/listings", apiListingRouter);
-app.use("/api/listings/:id/reviews", apiReviewRouter);
-app.use("/api/auth", apiUserRouter);
-=======
 app.use("/api/auth", apiAuthRouter);
 app.use("/api/listings", apiListingsRouter);
 app.use("/api/reviews", apiReviewsRouter);
@@ -182,20 +152,15 @@ if (serveReactFrontend) {
     app.use("/listings/:id/reviews", reviewRouter);
     app.use("/",userRouter);
 }
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 
 
-const reactDistPath = path.join(__dirname, "frontend", "dist");
-const reactIndexPath = path.join(reactDistPath, "index.html");
+app.get("/getcookies",(req,res)=>{
+    let {name="anonymous"} = req.cookies;
 
-app.use(express.static(reactDistPath));
+    res.send(`Hi , ${name}`);
+})
 
-<<<<<<< HEAD
-app.get(/^(?!\/api(?:\/|$)).*/, (req, res) => {
-    res.sendFile(reactIndexPath);
-});
-=======
 app.get("/",(req,res,next)=>{
     if (serveReactFrontend) {
         return res.sendFile(reactIndexPath);
@@ -213,7 +178,6 @@ if (serveReactFrontend) {
         return res.sendFile(reactIndexPath);
     });
 }
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 
 
@@ -225,12 +189,6 @@ app.all(/(.*)/,(req,res,next)=>{
 app.use((err,req,res,next)=>{
 
  let {statusCode=500 , message="Something went wrong"}=err;
-<<<<<<< HEAD
- if (isApiRequest(req)) {
-    return sendError(res, message, statusCode, err.details);
- }
- res.status(statusCode).send(message);
-=======
  if (req.originalUrl.startsWith("/api")) {
     return res.status(statusCode).json({
         ok: false,
@@ -239,7 +197,6 @@ app.use((err,req,res,next)=>{
  }
  res.status(statusCode).render("error.ejs",{err});
 //  res.status(statusCode).send(message);
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 })
 
 let port=8000;

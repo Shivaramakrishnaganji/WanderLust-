@@ -1,34 +1,4 @@
 const express = require("express");
-<<<<<<< HEAD
-const router = express.Router();
-const multer = require("multer");
-const { storage } = require("../cloudConfig.js");
-const wrapAsync = require("../utils/wrapAsync.js");
-const { isLoggedIn, isOwner, validateListing } = require("../middleware.js");
-const listingController = require("../controllers/listings.js");
-
-const upload = multer({ storage });
-
-router.route("/")
-  .get(wrapAsync(listingController.apiIndex))
-  .post(
-    isLoggedIn,
-    upload.single("listing[image]"),
-    validateListing,
-    wrapAsync(listingController.apiCreateListing)
-  );
-
-router.route("/:id")
-  .get(wrapAsync(listingController.apiShowListing))
-  .put(
-    isLoggedIn,
-    isOwner,
-    upload.single("listing[image]"),
-    validateListing,
-    wrapAsync(listingController.apiUpdateListing)
-  )
-  .delete(isLoggedIn, isOwner, wrapAsync(listingController.apiDestroyListing));
-=======
 const multer = require("multer");
 const mbxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
 const Listing = require("../models/listing.js");
@@ -239,6 +209,5 @@ router.delete(
     });
   })
 );
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 module.exports = router;

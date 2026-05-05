@@ -1,16 +1,4 @@
 const express = require("express");
-<<<<<<< HEAD
-const router = express.Router({ mergeParams: true });
-const wrapAsync = require("../utils/wrapAsync.js");
-const { validateReview, isLoggedIn, isReviewAuthor } = require("../middleware.js");
-const reviewController = require("../controllers/reviews.js");
-
-router.post(
-  "/",
-  isLoggedIn,
-  validateReview,
-  wrapAsync(reviewController.apiCreateReview)
-=======
 const wrapAsync = require("../utils/wrapAsync.js");
 const { validateReview } = require("../middleware.js");
 const Review = require("../models/review.js");
@@ -68,16 +56,10 @@ router.post(
       review: savedReview,
     });
   })
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 );
 
 router.delete(
   "/:reviewId",
-<<<<<<< HEAD
-  isLoggedIn,
-  isReviewAuthor,
-  wrapAsync(reviewController.apiDestroyReview)
-=======
   isApiLoggedIn,
   wrapAsync(async (req, res) => {
     const { reviewId } = req.params;
@@ -115,7 +97,6 @@ router.delete(
       reviewId,
     });
   })
->>>>>>> 9838c49 (migration from the EJS to Reactjs)
 );
 
 module.exports = router;
