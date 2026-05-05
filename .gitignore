@@ -3,3 +3,4 @@ node_modules/
 classroom
 .sixth/
 notes.md
+frontend/dist/

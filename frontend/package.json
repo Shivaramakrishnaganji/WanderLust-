@@ -1,11 +1,18 @@
 {
+<<<<<<< HEAD
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
+=======
+  "name": "major-project-frontend",
+  "private": true,
+  "version": "1.0.0",
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+<<<<<<< HEAD
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -25,3 +32,17 @@
     "vite": "^8.0.10"
   }
 }
+=======
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.30.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.19"
+  }
+}
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)

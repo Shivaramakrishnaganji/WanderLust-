@@ -1,6 +1,7 @@
 const express=require("express");
 const app=express();
 const dns = require("dns");
+const fs = require("fs");
 
 
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
@@ -25,9 +26,18 @@ const flash=require('connect-flash');
 
 
 //Routes Paths
+<<<<<<< HEAD
 const apiListingRouter = require("./routes/apiListings.js");
 const apiReviewRouter = require("./routes/apiReviews.js");
 const apiUserRouter = require("./routes/apiUsers.js");
+=======
+const listingRouter = require("./routes/listing.js");
+const reviewRouter= require("./routes/reviews.js");
+const userRouter=require("./routes/user.js");
+const apiAuthRouter = require("./routes/apiAuth.js");
+const apiListingsRouter = require("./routes/apiListings.js");
+const apiReviewsRouter = require("./routes/apiReviews.js");
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 //Implemetation of the passport's
 const passport = require("passport");
@@ -36,6 +46,11 @@ const User = require("./models/user.js");
 
 // const MONGO_URL='mongodb://127.0.0.1:27017/wanderlust';
 const dbUrl= process.env.ATLAS_DB_URL;
+const isProduction = process.env.NODE_ENV === "production";
+const forceLegacyRollback = process.env.FORCE_EJS_ROLLBACK === "true";
+const serveReactFrontend = isProduction && !forceLegacyRollback;
+const reactDistPath = path.join(__dirname, "frontend", "dist");
+const reactIndexPath = path.join(reactDistPath, "index.html");
 
 const store=MongoStore.create({
     mongoUrl: dbUrl,
@@ -147,9 +162,27 @@ app.use((req,res,next)=>{
 
 
 //Routes
+<<<<<<< HEAD
 app.use("/api/listings", apiListingRouter);
 app.use("/api/listings/:id/reviews", apiReviewRouter);
 app.use("/api/auth", apiUserRouter);
+=======
+app.use("/api/auth", apiAuthRouter);
+app.use("/api/listings", apiListingsRouter);
+app.use("/api/reviews", apiReviewsRouter);
+
+if (serveReactFrontend) {
+    if (!fs.existsSync(reactIndexPath)) {
+        throw new Error("React production build missing. Run `npm --prefix frontend run build` before starting production.");
+    }
+
+    app.use(express.static(reactDistPath));
+} else {
+    app.use("/listings",listingRouter);
+    app.use("/listings/:id/reviews", reviewRouter);
+    app.use("/",userRouter);
+}
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 
 
@@ -158,9 +191,29 @@ const reactIndexPath = path.join(reactDistPath, "index.html");
 
 app.use(express.static(reactDistPath));
 
+<<<<<<< HEAD
 app.get(/^(?!\/api(?:\/|$)).*/, (req, res) => {
     res.sendFile(reactIndexPath);
 });
+=======
+app.get("/",(req,res,next)=>{
+    if (serveReactFrontend) {
+        return res.sendFile(reactIndexPath);
+    }
+    res.send("Hi , I am root user")
+});
+
+if (serveReactFrontend) {
+    // SPA fallback only for client routes. API routes are handled above.
+    app.get(/^(?!\/api(?:\/|$)).*/, (req, res, next) => {
+        if (req.path.includes(".") || req.path.startsWith("/uploads/") || req.path.startsWith("/public/")) {
+            return next();
+        }
+
+        return res.sendFile(reactIndexPath);
+    });
+}
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)
 
 
 
@@ -172,10 +225,21 @@ app.all(/(.*)/,(req,res,next)=>{
 app.use((err,req,res,next)=>{
 
  let {statusCode=500 , message="Something went wrong"}=err;
+<<<<<<< HEAD
  if (isApiRequest(req)) {
     return sendError(res, message, statusCode, err.details);
  }
  res.status(statusCode).send(message);
+=======
+ if (req.originalUrl.startsWith("/api")) {
+    return res.status(statusCode).json({
+        ok: false,
+        message,
+    });
+ }
+ res.status(statusCode).render("error.ejs",{err});
+//  res.status(statusCode).send(message);
+>>>>>>> 9838c49 (migration from the EJS to Reactjs)
 })
 
 let port=8000;
