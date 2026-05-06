@@ -1,6 +1,6 @@
 const express = require("express");
 const wrapAsync = require("../utils/wrapAsync.js");
-const { validateReview } = require("../middleware.js");
+const { reviewSchema } = require("../schema.js");
 const Review = require("../models/review.js");
 const Listing = require("../models/listing.js");
 
@@ -17,10 +17,23 @@ function isApiLoggedIn(req, res, next) {
   return next();
 }
 
+function validateApiReview(req, res, next) {
+  const { error } = reviewSchema.validate({ review: req.body.review });
+  if (error) {
+    const message = error.details.map((item) => item.message).join(", ");
+    return res.status(400).json({
+      ok: false,
+      message,
+    });
+  }
+
+  return next();
+}
+
 router.post(
   "/",
   isApiLoggedIn,
-  validateReview,
+  validateApiReview,
   wrapAsync(async (req, res) => {
     const { listingId } = req.body;
 
